@@ -15,32 +15,33 @@ def main():  # main function to call on upon execution
         try:
             message = connection_socket.recv(2048).decode()  # receives data through a http request & decodes it to a string
             filename = message.split()[1]  # splits message into parts and extracts second part which contains filename/path
+            if filename == "/exit":
+                break
             f = open(filename[1:])
-            output_data = f.read()
-            connection_socket.send("HTTP/1.1 200 OK\r\n".encode())  # sends http response indicating a 200 ok message
-            connection_socket.send("Content-Type: text/html; charset=UTF-8\r\n".encode())  # Sends header to tell browser the data is an html page
-            connection_socket.send(f"Content-Length: {len(output_data.encode('utf-8')) + 2}\r\n".encode())  # Sends Content-Length header
-            connection_socket.send("\r\n".encode())  # Empty line to indicate end of headers
-            for i in range(0, len(output_data)):  # iterates over every character in the string
-                connection_socket.send(output_data[i].encode())
-            connection_socket.send("\r\n".encode())  # indicates end of message
+
+            output_data = f.read() + "\r\n"
+            status_header = "HTTP/1.1 200 OK\r\n"  # Indicates a 200 OK response
+            content_type_header = "Content-Type: text/html; charset=UTF-8\r\n"  # Tells the browser that the response contains an html page
+            content_length_header = f"Content-Length: {len(output_data.encode('utf-8'))}\r\n"  # Header to display the length of the content
+
+            output_data = status_header + content_type_header + content_length_header + "\r\n" + output_data  # Construct the request by appending components
+            connection_socket.send(output_data.encode())  # Send the constructed request
 
         except IOError:  # initiates an exception handler
-            connection_socket.send("HTTP/1.1 404 Not Found\r\n".encode())  # sends http response indicating a 404 Not found message
-            f = open("404.html")
-            error_page = f.read()
-            connection_socket.send("Content-Type: text/html; charset=UTF-8\r\n".encode())  # Sends header to tell browser the data is an html page
-            connection_socket.send(f"Content-Length: {len(error_page.encode('utf-8')) + 2}\r\n".encode())  # Sends Content-Length header
-            connection_socket.send("\r\n".encode())  # Empty line to indicate end of headers
+            status_header = "HTTP/1.1 404 Not Found\r\n"  # Indicates a 404 Not found response
+            f = open("404.html")  # opens the 404 html file
 
-            for i in range(0, len(error_page)):
-                connection_socket.send(error_page[i].encode())
-            connection_socket.send("\r\n".encode())
+            error_output_data = f.read() + "\r\n"  # Reads the 404 html file and appends a carriage return
+            content_type_header = "Content-Type: text/html; charset=UTF-8\r\n"  # Tells the browser that the response contains an html page
+            content_length_header = f"Content-Length: {len(error_output_data.encode('utf-8'))}\r\n"  # Header to display the length of the content
+
+            error_output_data = status_header + content_type_header + content_length_header + "\r\n" + error_output_data  # Construct the request by appending components
+            connection_socket.send(error_output_data.encode())  # Send the constructed request
 
         finally:
             connection_socket.close()  # close connection socket
-        server_socket.close()  # close server socket
-        sys.exit()  # Terminate the program after sending the corresponding data
+    server_socket.close()  # close server socket
+    sys.exit()  # Terminate the program after sending the corresponding data
 
 
 if __name__ == "__main__":  # ensure the script is executed directly
